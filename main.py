@@ -27,7 +27,7 @@ from numpy import linalg as nl
 
 # default settings for radiobuttons (start at 1) and spinboxes (start at 0)
 # change these values so you have what you want at startup
-defsps = 2
+defsps = 5
 defchans = 3
 defsens = 2
 defsamplen = 3
@@ -37,7 +37,7 @@ deftwflen = 2
 datapath = "C:/Baart/data/"
 plotpath = "C:/Baart/plots/"
 
-baud_rate = 525000
+baud_rate = 512000
 num_points = 16384  # Amount of samples to read.
 sample_rate = 5000  # Sampling frequency (SPS).
 fmax = sample_rate / 2
@@ -151,7 +151,7 @@ class Application:
         if (portnames != []):
             self.sel_port.current(0)
         self.read_sps = ttk.Combobox(adc, textvariable='', state="readonly", width=8)
-        self.read_sps['values'] = ('1000', '2000', '5000', '10000', '15000', '20000')
+        self.read_sps['values'] = ('100','250','500','1000', '2000', '5000', '10000', '15000')
         self.read_sps.current(defsps)
         self.read_sens = ttk.Combobox(adc, textvariable='', state="readonly", width=8)
         self.read_sens['values'] = ('100 mV/g', '200 mV/g', '300 mV/g', '500 mV/g')
@@ -295,7 +295,8 @@ class Application:
         
 
     def read_serial(self):
-        global sample_rate, fstep, twf, message, acc_sens, baud_rate, adc_bits, adc_mVolts, getchans, adc_res
+        global sample_rate, fstep, twf, message, acc_sens, baud_rate, adc_bits, adc_mVolts, getchans, adc_res,\
+            num_points, channel_1, channel_2, channel_3, channel_4, max_freq, twflen, sequence, channels
         acc_sens = 300  # 300 mV/g
         adc_mVolts = 3300
         adc_bits = 12
@@ -324,8 +325,7 @@ class Application:
             messagebox.showerror("Result", "Can't open serial port: " + str(ex))
 
         if (state_serial == True):
-            global num_points, channel_1, channel_2, channel_3, channel_4, max_freq, twflen, sequence, channels
-
+            time.sleep(0.5)
             channel_1 = []
             channel_2 = []
             channel_3 = []
@@ -334,54 +334,64 @@ class Application:
             buffer = []
             serial_avr.flushInput()
             serial_avr.flushOutput()
-
             values_received = []
             num_points = int(self.read_len.get())
             sen = self.read_sens.get()
-            acc_sens = ((int)(sen[:3]))
+            acc_sens = (int)(sen[:3])
 
             data_rxd = 0  # Received samples counter.
             sps = self.read_sps.get()
-
-            if sps == '1000':
-                sample_rate = 1000
+            if sps == '100':
+                sample_rate = 100
                 duration = num_points / sample_rate
                 message = "Sampling time:\n{0:.2f} Seconds\nSending ENQ ...\n".format(duration)
                 self.show_message(self.adc_message, message)
                 serial_avr.write(b'ENQ1')
+            elif sps == '250':
+                sample_rate = 200
+                duration = num_points / sample_rate
+                message = "Sampling time:\n{0:.2f} Seconds\nSending ENQ ...\n".format(duration)
+                self.show_message(self.adc_message, message)
+                serial_avr.write(b'ENQ2')
+            elif sps == '500':
+                sample_rate = 500
+                duration = num_points / sample_rate
+                message = "Sampling time:\n{0:.2f} Seconds\nSending ENQ ...\n".format(duration)
+                self.show_message(self.adc_message, message)
+                serial_avr.write(b'ENQ3')
+            elif sps == '1000':
+                sample_rate = 1000
+                duration = num_points / sample_rate
+                message = "Sampling time:\n{0:.2f} Seconds\nSending ENQ ...\n".format(duration)
+                self.show_message(self.adc_message, message)
+                serial_avr.write(b'ENQ4')
             elif sps == '2000':
                 sample_rate = 2000
                 duration = num_points / sample_rate
                 message = "Sampling time:\n{0:.2f} Seconds\nSending ENQ ...\n".format(duration)
                 self.show_message(self.adc_message, message)
-                serial_avr.write(b'ENQ2')
+                serial_avr.write(b'ENQ5')
             elif sps == '5000':
                 sample_rate = 5000
                 duration = num_points / sample_rate
                 message = "Sampling time:\n{0:.2f} Seconds\nSending ENQ ...\n".format(duration)
                 self.show_message(self.adc_message, message)
-                serial_avr.write(b'ENQ3')
+                serial_avr.write(b'ENQ6')
             elif sps == '10000':
                 sample_rate = 10000
                 duration = num_points / sample_rate
                 message = "Sampling time:\n{0:.2f} Seconds\nSending ENQ ...\n".format(duration)
                 self.show_message(self.adc_message, message)
-                serial_avr.write(b'ENQ4')
-            elif sps == '15000':
+                serial_avr.write(b'ENQ7')
+            else:
                 sample_rate = 15000
                 duration = num_points / sample_rate
                 message = "Sampling time:\n{0:.2f} Seconds\nSending ENQ ...\n".format(duration)
                 self.show_message(self.adc_message, message)
-                serial_avr.write(b'ENQ5')
-            else:
-                sample_rate = 20000
-                duration = num_points / sample_rate
-                message = "Sampling time:\n{0:.2f} Seconds\nSending ENQ ...\n".format(duration)
-                self.show_message(self.adc_message, message)
-                serial_avr.write(b'ENQ6')
+                serial_avr.write(b'ENQ8')
 
             serial_avr.write(b"\x7E")  # End of packet.
-
+            serial_avr.flushInput()
             global t_timeout
             timeout_state = False
             t0 = time.time()  # Start loop time stamp.
@@ -409,7 +419,6 @@ class Application:
                             else:
                                 values_received.append(values[x])
                             x = x + 1
-
                         channel1 = (values_received[0] * 256) + values_received[1]
                         channel2 = (values_received[2] * 256) + values_received[3]
                         channel3 = (values_received[4] * 256) + values_received[5]
@@ -431,8 +440,6 @@ class Application:
                     timeout_state = True
 
             if timeout_state == False:
-                toc = time.clock()
-                print(toc - tic)
                 self.adc_message.config(state=Tk.NORMAL)  # Enable to modify
                 self.adc_message.insert(Tk.END, "Sending EOT \n")
                 root.update_idletasks()  # Needed to make message visible
@@ -467,14 +474,13 @@ class Application:
                 fl = "ADC"
                 self.chan_var.set(1)
                 if l != 0:  # Apply only if data available
+                    print(seq)
                     plot_title = "ADC - Channel 1"
                     message = "Success ...."
                     self.show_message(self.adc_message, message)
                     message = ""
                     self.chan_var.set(1)
-                    self.fmax_var.set(5)
                     self.twf_var.set(2)
-                    max_freq = 1000
                     twflen = 2048
                     fmax = sample_rate / 2
                     l = len(twf)
@@ -880,27 +886,44 @@ class Application:
                 self.show_message(self.data_message, message)
 
     def set_button_states(self):
-        global sample_rate, num_points
+        global sample_rate, num_points, channels, max_freq
 
         maxf = sample_rate / 2
-
-        if maxf > 500:
+        self.fmax_var.set(2)
+        max_freq = 50
+        if maxf >= 100:
+            self.fmax_button3.configure(state=NORMAL)
+            self.fmax_var.set(3)
+            max_freq = 100
+        else:
+            self.fmax_button3.configure(state=DISABLED)
+        if maxf >= 250:
+            self.fmax_button4.configure(state=NORMAL)
+            self.fmax_var.set(4)
+            max_freq = 250
+        else:
+            self.fmax_button4.configure(state=DISABLED)
+        if maxf >= 500:
+            self.fmax_var.set(5)
+            max_freq = 500
             self.fmax_button5.configure(state=NORMAL)
         else:
             self.fmax_button5.configure(state=DISABLED)
-        if maxf > 1000:
+        if maxf >= 1000:
+            self.fmax_var.set(6)
+            max_freq = 1000
             self.fmax_button6.configure(state=NORMAL)
         else:
             self.fmax_button6.configure(state=DISABLED)
-        if maxf > 2500:
+        if maxf >= 2500:
             self.fmax_button7.configure(state=NORMAL)
         else:
             self.fmax_button7.configure(state=DISABLED)
-        if maxf > 5000:
+        if maxf >= 5000:
             self.fmax_button8.configure(state=NORMAL)
         else:
             self.fmax_button8.configure(state=DISABLED)
-        if maxf > 10000:
+        if maxf >= 10000:
             self.fmax_button9.configure(state=NORMAL)
         else:
             self.fmax_button9.configure(state=DISABLED)
@@ -921,6 +944,19 @@ class Application:
             self.twf_button5.configure(state=NORMAL)
         else:
             self.twf_button5.configure(state=DISABLED)
+
+        if channels > 1:
+            self.chan_button2.configure(state=NORMAL)
+        else:
+            self.chan_button2.configure(state=DISABLED)
+        if num_points > 2:
+            self.chan_button3.configure(state=NORMAL)
+        else:
+            self.chan_button3.configure(state=DISABLED)
+        if num_points > 3:
+            self.chan_button4.configure(state=NORMAL)
+        else:
+            self.chan_button4.configure(state=DISABLED)
 
     def save_plot(self):
         ftypes = [('Portable Network Graphics', '*.png')]
